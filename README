@@ -1,0 +1,17 @@
+Written by Jason Elter 2020.
+
+
+FILES:
+Dense.h -- Header file for the Dense class which represents a layer in a MlpNetwork.
+Dense.cpp -- Implementation file for the Dense class which represents a layer in a MlpNetwork.
+Matrix.h -- Header file for the Matrix class which represents a 2D matrix or 1D vector.
+Matrix.cpp -- Implementation file for the Matrix class which represents a 2D matrix or 1D vector.
+MlpNetwork.h -- Header file for the MlpNetwork class which represents 
+	a multi-layered neural network for digit recognition in images.
+MlpNetwork.cpp -- Implementation file for the MlpNetwork class which represents 
+	a multi-layered neural network for digit recognition in images.
+Activation.h -- Header file for the Activation class which an activation function to apply to a Matrix.
+Activation.cpp -- Implementation file for the Activation class which an activation function to apply to a Matrix.
+Digit.h -- Header file for Digit struct which is the result of a MlpNetwork.
+Makefile -- Makefile for compiling.
+README -- you're reading it right now!
