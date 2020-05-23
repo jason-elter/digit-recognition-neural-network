@@ -8,11 +8,9 @@
  */
 
 #define ERROR_BAD_MATRIX_INPUT "Error: Invalid Matrix input."
-#define ERROR_NOT_MATRIX "Error: Can't preform Matrix operation on Vector."
 #define ERROR_MATRIX_DIMS "Error: Can't use operation on two Matrices with incompatible dimensions."
 #define ERROR_BAD_MATRIX_INDEX "Error: Invalid index to access matrix."
 
-#define PRINT_MATRIX_MESSAGE "Image processes:"
 #define NO_PIXEL "  "
 #define YES_PIXEL "**"
 
@@ -23,7 +21,7 @@
 #include "Matrix.h"
 
 // Returns pointer to a malloced array of the given length, filled with 0.
-float *_createZeroVector(int length)
+static float *_createZeroVector(int length)
 {
     auto *vector = new float[length];
     for (int i = 0; i < length; i++)
@@ -34,7 +32,7 @@ float *_createZeroVector(int length)
 }
 
 // Returns pointer to a malloced copy of the given array.
-float *_copyVector(int length, const float vector[])
+static float *_copyVector(int length, const float vector[])
 {
     auto *newVector = new float[length];
     for (int i = 0; i < length; i++)
@@ -44,10 +42,18 @@ float *_copyVector(int length, const float vector[])
     return newVector;
 }
 
+/**
+ * Constructs Matrix rows * cols.
+ * Inits all elements to 0.
+ *
+ * @param rows Number of rows the matrix will have.
+ * @param colsNumber of columns the matrix will have.
+ */
 Matrix::Matrix(int rows, int cols) : _rows(rows), _cols(cols)
 {
     if (rows <= 0 || cols <= 0)
     {
+        std::cerr << "creation fail" << std::endl;
         std::cerr << ERROR_BAD_MATRIX_INPUT << std::endl;
         exit(EXIT_FAILURE);
     }
@@ -68,12 +74,20 @@ Matrix::Matrix(int rows, int cols) : _rows(rows), _cols(cols)
     }
 }
 
+/**
+ * Constructs 1*1 Matrix.
+ * Inits the single element to 0.
+ */
 Matrix::Matrix() : _rows(DEFAULT_SIZE), _cols(DEFAULT_SIZE), _matrix(nullptr)
 {
     _vector = _createZeroVector(DEFAULT_SIZE);
 }
 
-// Copies another Matrix into this one.
+/**
+ * Copies another Matrix into this one. (Private method)
+ *
+ * @param other The matrix to copy.
+ */
 void Matrix::_copyMatrix(const Matrix &other)
 {
     _rows = other._rows;
@@ -94,12 +108,19 @@ void Matrix::_copyMatrix(const Matrix &other)
     }
 }
 
+/**
+ * Constructs Matrix from another Matrix m.
+ *
+ * @param m The Matrix to copy.
+ */
 Matrix::Matrix(const Matrix &m)
 {
     _copyMatrix(m);
 }
 
-// Frees the memory occupied by the arrays.
+/**
+ * Frees the memory occupied by the arrays. (private)
+ */
 void Matrix::_freeArrays()
 {
     if (_matrix == nullptr)
@@ -116,46 +137,71 @@ void Matrix::_freeArrays()
     }
 }
 
+/**
+ * Destroys the Matrix and frees the memory occupied by it.
+ */
 Matrix::~Matrix()
 {
     _freeArrays();
 }
 
+/**
+ * Returns the amount of rows as int.
+ *
+ * @return The amount of rows as int.
+ */
 int Matrix::getRows() const
 {
     return _rows;
 }
 
+/**
+ * Returns the amount of columns as int.
+ *
+ * @return The amount of columns as int.
+ */
 int Matrix::getCols() const
 {
     return _cols;
 }
 
-void Matrix::vectorize()
+/**
+ * Transforms a matrix into a column vector.
+ * Supports function calling concatenation.
+ * i.e.(1) Matrix m(5,4);... m.vectorize()
+ * m.getCols() == 1
+ * m.getRows() == 20
+ * i.e.(2) Matrix m(5,4), b(20, 1); then
+ * m.vectorize() + b should be a valid expression.
+ */
+Matrix &Matrix::vectorize()
 {
-    if (_matrix == nullptr)
+    if (_matrix != nullptr)
     {
-        std::cerr << ERROR_NOT_MATRIX << std::endl;
-        exit(EXIT_FAILURE);
-    }
-
-    int newRows = _rows * _cols;
-    _vector = new float[newRows];
-    for (int y = 0, i = 0; y < _rows; y++)
-    {
-        float *row = _matrix[y];
-        for (int x = 0; x < _cols; x++, i++)
+        int newRows = _rows * _cols;
+        _vector = new float[newRows];
+        for (int y = 0, i = 0; y < _rows; y++)
         {
-            _vector[i] = row[x];
+            float *row = _matrix[y];
+            for (int x = 0; x < _cols; x++, i++)
+            {
+                _vector[i] = row[x];
+            }
+            delete[] row;
         }
-        delete[] row;
+        delete[] _matrix;
+        _matrix = nullptr;
+        _rows = newRows;
+        _cols = DEFAULT_SIZE;
     }
-    delete[] _matrix;
-    _matrix = nullptr;
-    _rows = newRows;
-    _cols = DEFAULT_SIZE;
+    return *this;
 }
 
+/**
+ * Prints matrix elements, no return value.
+ * prints space after each element (incl. last element in the row).
+ * prints newline after each row (incl. last row).
+ */
 void Matrix::plainPrint() const
 {
     if (_matrix == nullptr)
@@ -179,6 +225,12 @@ void Matrix::plainPrint() const
     }
 }
 
+/**
+ * Matrix copy constructor (Matrix a,b; ... a = b;)
+ *
+ * @param other The matrix to copy.
+ * @return A reference to this Matrix after copying the other Matrix.
+ */
 Matrix &Matrix::operator=(const Matrix &other)
 {
     if (this != &other)
@@ -189,6 +241,12 @@ Matrix &Matrix::operator=(const Matrix &other)
     return *this;
 }
 
+/**
+ * Matrix a,b; -> a * b
+ *
+ * @param other The other matrix.
+ * @return A reference to the result as a Matrix.
+ */
 Matrix Matrix::operator*(const Matrix &other) const
 {
     if (_cols != other._rows)
@@ -209,53 +267,56 @@ Matrix Matrix::operator*(const Matrix &other) const
             {
                 newMatrix._vector[i] = _vector[i] * otherVal;
             }
+            return newMatrix;
         }
-        else
+
+        // Vector * Matrix.
+        for (int i = 0; i < newMatrix._rows; i++)
         {
-            // Vector * Matrix.
-            for (int i = 0; i < newMatrix._rows; i++)
+            for (int j = 0; j < newMatrix._cols; j++)
             {
-                for (int j = 0; j < newMatrix._cols; j++)
-                {
-                    newMatrix._matrix[i][j] = _vector[i] * other._matrix[0][j];
-                }
+                newMatrix._matrix[i][j] = _vector[i] * other._matrix[0][j];
             }
         }
-    }
-    else
-    {
-        if (other._matrix == nullptr)
-        {
-            // Matrix * Vector.
-            for (int i = 0; i < newMatrix._rows; i++)
-            {
-                float &sum = newMatrix._vector[i];
-                for (int k = 0; k < _cols; k++)
-                {
-                    sum += _matrix[i][k] * other._vector[k];
-                }
-            }
-        }
-        else
-        {
-            // Matrix * Matrix.
-            for (int i = 0; i < newMatrix._rows; i++)
-            {
-                for (int j = 0; j < newMatrix._cols; j++)
-                {
-                    float &sum = newMatrix._matrix[i][j];
-                    for (int k = 0; k < _cols; k++)
-                    {
-                        sum += _matrix[i][k] * other._matrix[k][j];
-                    }
-                }
-            }
-        }
+        return newMatrix;
     }
 
+    if (other._matrix == nullptr)
+    {
+        // Matrix * Vector.
+        for (int i = 0; i < newMatrix._rows; i++)
+        {
+            float &sum = newMatrix._vector[i];
+            for (int k = 0; k < _cols; k++)
+            {
+                sum += _matrix[i][k] * other._vector[k];
+            }
+        }
+        return newMatrix;
+    }
+
+    // Matrix * Matrix.
+    for (int i = 0; i < newMatrix._rows; i++)
+    {
+        for (int j = 0; j < newMatrix._cols; j++)
+        {
+            float &sum = newMatrix._matrix[i][j];
+            for (int k = 0; k < _cols; k++)
+            {
+                sum += _matrix[i][k] * other._matrix[k][j];
+            }
+        }
+    }
     return newMatrix;
 }
 
+/**
+ *  Matrix m; float c; -> m * c
+ *
+ * @param matrix A matrix.
+ * @param scalar A scalar (float).
+ * @return A reference to the result as a Matrix.
+ */
 Matrix Matrix::operator*(float scalar) const
 {
     Matrix newMatrix(*this);
@@ -280,11 +341,24 @@ Matrix Matrix::operator*(float scalar) const
     return newMatrix;
 }
 
+/**
+ *  Matrix m; float c; -> c * m
+ *
+ * @param matrix A matrix.
+ * @param scalar A scalar (float).
+ * @return A reference to the result as a Matrix.
+ */
 Matrix operator*(float scalar, const Matrix &matrix)
 {
     return (matrix * scalar);
 }
 
+/**
+ * Matrix a,b; -> a += b
+ *
+ * @param other The other matrix.
+ * @return A reference to this Matrix after addition.
+ */
 Matrix &Matrix::operator+=(const Matrix &other)
 {
     if (_cols != other._cols || _rows != other._rows)
@@ -315,6 +389,12 @@ Matrix &Matrix::operator+=(const Matrix &other)
     return *this;
 }
 
+/**
+ * Matrix a,b; -> a + b
+ *
+ * @param other The other matrix.
+ * @return A reference to the result as a Matrix.
+ */
 Matrix Matrix::operator+(const Matrix &other) const
 {
     if (_cols != other._cols || _rows != other._rows)
@@ -327,7 +407,10 @@ Matrix Matrix::operator+(const Matrix &other) const
     return (newMatrix += other);
 }
 
-float &Matrix::operator()(int i, int j)
+/**
+ * Double index access. (private)
+ */
+float &Matrix::_accessCell(int i, int j) const
 {
     if (i < 0 || j < 0 || i >= _rows || j >= _cols)
     {
@@ -339,33 +422,85 @@ float &Matrix::operator()(int i, int j)
     {
         return _vector[i];
     }
-
     return _matrix[i][j];
 }
 
+/**
+ * Single index access. (private)
+ */
+float &Matrix::_accessCell(int i) const
+{
+    int x = i % _cols;
+    int y = (i - x) / _cols;
+    return _accessCell(y, x);
+}
+
+/**
+ * For i,j indices, Matrix m:
+ * m(i,j) will return the i,j element.
+ *
+ * @param i The row index.
+ * @param j The column index.
+ * @return The i,j element in this Matrix.
+ */
+float &Matrix::operator()(int i, int j)
+{
+    return _accessCell(i, j);
+}
+
+/**
+ * For i index, Matrix m:
+ * m[i] will return the i'th element.
+ *
+ * @param i The index in the Matrix.
+ * @return The i'th element in this Matrix.
+ */
 float &Matrix::operator[](int i)
 {
-    int y = i % _cols, x = (i - y) / _cols;
-    return (*this)(y, x);
+    return _accessCell(i);
 }
 
+/**
+ * For i,j indices, Matrix m:
+ * m(i,j) will return the i,j element.
+ *
+ * @param i The row index.
+ * @param j The column index.
+ * @return The i,j element in this Matrix.
+ */
 float Matrix::operator()(int i, int j) const
 {
-    return (*this)(i, j);
+    return _accessCell(i, j);
 }
 
+/**
+ * For i index, Matrix m:
+ * m[i] will return the i'th element.
+ *
+ * @param i The index in the Matrix.
+ * @return The i'th element in this Matrix.
+ */
 float Matrix::operator[](int i) const
 {
-    return (*this)[i];
+    return _accessCell(i);
 }
 
+/**
+ * Fills matrix elements.
+ * Has to read input stream fully, otherwise, that's an error.
+ * istream is; Matrix m(rows, cols); ... is >> m;
+ *
+ * @param is The input stream.
+ * @param matrix The Matrix.
+ * @return A reference to the input stream.
+ */
 std::istream &operator>>(std::istream &is, Matrix &matrix)
 {
     if (matrix._matrix == nullptr)
     {
         for (int i = 0; i < matrix._rows; i++)
         {
-            is >> matrix._vector[i];
+            is.read((char *)&(matrix._vector[i]), sizeof(float));
             if (is.fail())
             {
                 std::cerr << ERROR_BAD_MATRIX_INPUT << std::endl;
@@ -380,7 +515,7 @@ std::istream &operator>>(std::istream &is, Matrix &matrix)
             float *row = matrix._matrix[i];
             for (int j = 0; j < matrix._cols; j++)
             {
-                is >> row[j];
+                is.read((char *)&(row[j]), sizeof(float));
                 if (is.fail())
                 {
                     std::cerr << ERROR_BAD_MATRIX_INPUT << std::endl;
@@ -390,17 +525,26 @@ std::istream &operator>>(std::istream &is, Matrix &matrix)
         }
     }
 
-    if (!is.eof())
+    // Check if can read anymore.
+    float test;
+    if (is.read((char *)&test, sizeof(float)))
     {
         std::cerr << ERROR_BAD_MATRIX_INPUT << std::endl;
         exit(EXIT_FAILURE);
     }
+    is.clear();
     return is;
 }
 
+/**
+ * Pretty export of the matrix.
+ *
+ * @param os The output stream.
+ * @param matrix The matrix.
+ * @return A reference to the output stream.
+ */
 std::ostream &operator<<(std::ostream &os, const Matrix &matrix)
 {
-    os << PRINT_MATRIX_MESSAGE << std::endl;
     if (matrix._matrix == nullptr)
     {
         for (int i = 0; i < matrix._rows; i++)
@@ -421,5 +565,5 @@ std::ostream &operator<<(std::ostream &os, const Matrix &matrix)
         }
     }
 
-    return os << std::endl;
+    return os;
 }

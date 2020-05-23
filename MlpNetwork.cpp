@@ -15,6 +15,14 @@
 
 #include "MlpNetwork.h"
 
+/**
+ * Accepts 2 arrays, size 4 each.
+ * One for weights and one for biases.
+ * Constructs the network.
+ *
+ * @param weights
+ * @param biases
+ */
 MlpNetwork::MlpNetwork(const Matrix weights[MLP_SIZE], const Matrix biases[MLP_SIZE]) : _weights(
         weights), _biases(biases)
 {
@@ -31,6 +39,14 @@ MlpNetwork::MlpNetwork(const Matrix weights[MLP_SIZE], const Matrix biases[MLP_S
     }
 }
 
+/**
+ * Applies the entire network on the input.
+ * Returns Digit struct.
+ * MlpNetwork m(...); ... Digit output = m(img);
+ *
+ * @param input The input Matrix.
+ * @return Digit struct that represents the most likely digit in the image.
+ */
 Digit MlpNetwork::operator()(const Matrix &input) const
 {
     if (input.getRows() != (imgDims.rows * imgDims.cols) || input.getCols() != IS_MLP_VECTOR)
@@ -41,12 +57,12 @@ Digit MlpNetwork::operator()(const Matrix &input) const
 
     // Apply the layers.
     Matrix result(Dense(_weights[0], _biases[0], Relu)(input));
-    for (int i = 0; i < (MLP_SIZE - 2); i++)
+    for (int i = 1; i < (MLP_SIZE - 1); i++)
     {
         Dense currentLayer(_weights[i], _biases[i], Relu);
         result = currentLayer(result);
     }
-    result = Dense(_weights[0], _biases[0], Softmax)(result);
+    result = Dense(_weights[3], _biases[3], Softmax)(result);
 
     // Find Most likely digit.
     Digit digit = {0, result[0]};

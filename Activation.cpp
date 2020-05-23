@@ -16,16 +16,35 @@
 #include "Activation.h"
 #include "Matrix.h"
 
+/**
+ * Accepts activation type (Relu/Softmax)
+ * and defines the instance's activation accordingly.
+ *
+ * @param actType The type of activation function to use.
+ */
 Activation::Activation(ActivationType actType) : _type(actType)
 {
     _activate = (actType == Relu) ? _relu : _softmax;
 }
 
+/**
+ * Returns this activation's type (Relu/Softmax).
+ *
+ * @return This activation's type (Relu/Softmax).
+ */
 ActivationType Activation::getActivationType() const
 {
     return _type;
 }
 
+/**
+ * Applies activation function on input.
+ * (Does not change input)
+ * Matrix output = act(input);
+ *
+ * @param input The matrix to activate.
+ * @return A reference to the activated matrix (which is new).
+ */
 Matrix Activation::operator()(const Matrix &input) const
 {
     if (input.getCols() != IS_VECTOR)
